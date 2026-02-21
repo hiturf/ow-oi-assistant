@@ -15,7 +15,7 @@ try:
 except (ImportError, ModuleNotFoundError):
     resource = None  # type: ignore
 
-from security import SecurityManager  # 修复1：添加导入
+from security import SecurityManager
 
 class CodeRunner:
     """处理C++代码的编译、运行、调试和输出比较。"""
