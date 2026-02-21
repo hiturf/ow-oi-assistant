@@ -1,0 +1,28 @@
+security:
+  allowed_paths:
+    - "./tmp"
+    - "./mingw64/bin"
+  forbidden_commands:
+    - "rm -rf"
+    - "format"
+    - "del"
+    - "chmod 777"
+    
+execution:
+  max_time: 5000  # 最大运行时间(ms)
+  max_memory: 256  # 最大内存(MB)
+  max_output_size: 1048576  # 最大输出大小(1MB)
+  
+compilation:
+  compiler_path: "./mingw64/bin/g++.exe"
+  cpp_standard: "c++17"
+  optimization_level: "-O2"
+  
+paths:
+  temp_dir: "./tmp"
+  mingw_dir: "./mingw64"
+  cache_expiry: 300  # 缓存过期时间(秒)
+  
+logging:
+  level: "INFO"
+  audit_log: "./audit.log"
