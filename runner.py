@@ -50,17 +50,16 @@ class CodeRunner:
         compiler = self.config['compilation']['compiler_path']
         std = self.config['compilation']['cpp_standard']
         optimization = self.config['compilation']['optimization_level']
+        extra_flags = self.config['compilation'].get('extra_flags', [])
 
         compile_cmd = [
             compiler,
             str(cpp_file),
             '-std=' + std,
             optimization,
-            '-o', str(exe_file),
-            '-Wall',
-            '-Wextra',
-            '-Werror'
         ]
+        compile_cmd.extend(extra_flags)
+        compile_cmd.extend(['-o', str(exe_file)])
 
         try:
             result = subprocess.run(

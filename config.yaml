@@ -1,3 +1,11 @@
+# OI助手配置文件
+
+# 服务配置
+server:
+  host: "127.0.0.1"    # 服务地址 (可被环境变量 OI_HOST 覆盖)
+  port: 8000           # 服务端口 (可被环境变量 OI_PORT 覆盖)
+
+# 安全设置
 security:
   allowed_paths:
     - "./tmp"
@@ -8,21 +16,35 @@ security:
     - "del"
     - "chmod 777"
     
+# 运行限制
 execution:
-  max_time: 5000  # 最大运行时间(ms)
-  max_memory: 256  # 最大内存(MB)
+  max_time: 5000            # 最大运行时间(ms)
+  max_memory: 256           # 最大内存(MB)
   max_output_size: 1048576  # 最大输出大小(1MB)
   
+# 编译设置
 compilation:
   compiler_path: "./mingw64/bin/g++.exe"
-  cpp_standard: "c++17"
-  optimization_level: "-O2"
+  cpp_standard: "c++11"     # C++标准: c++11, c++14, c++17, c++20
+  optimization_level: "-O2" # 优化级别: -O0, -O1, -O2, -O3, -Os
+  # 额外编译选项（可选）
+  extra_flags:
+    - "-Wall"               # 开启所有警告
+    - "-Wextra"             # 额外警告
+    - "-Wl,--stack=512000000"  # 设置栈大小（Windows）
+  # 更多可选参数示例：
+  # - "-static"             # 静态链接
+  # - "-DONLINE_JUDGE"      # 定义宏
+  # - "-m64"                 # 64位编译
+  # - "-fno-ms-extensions"  # 禁用MS扩展
   
+# 路径设置
 paths:
   temp_dir: "./tmp"
   mingw_dir: "./mingw64"
   cache_expiry: 300  # 缓存过期时间(秒)
   
+# 日志设置
 logging:
   level: "INFO"
   audit_log: "./audit.log"
