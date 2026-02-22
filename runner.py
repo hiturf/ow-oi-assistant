@@ -32,7 +32,7 @@ class CodeRunner:
         # config_path 现在一定是 str
         self.security = SecurityManager(config_path)
 
-    def compile_cpp(self, code: str, filename: Optional[str] = None) -> Dict[str, Any]:
+    def compile_cpp(self, code: str, filename: Optional[str] = None) -> Dict[str, Any]:  # pylint: disable=too-many-locals
         """编译C++代码，返回包含成功标志、可执行文件路径和错误信息的字典。"""
         if filename is None:
             temp_path = self.security.get_secure_temp_path("compile")
@@ -47,19 +47,26 @@ class CodeRunner:
         exe_file.parent.mkdir(parents=True, exist_ok=True)
         cpp_file.write_text(code, encoding='utf-8')
 
-        compiler = self.config['compilation']['compiler_path']
+        # 构建编译命令 - 使用 -B 选项指定搜索目录，避免修改 PATH
+        compiler_path = str(self.security.mingw_dir / "bin" / "g++.exe")
+        libexec_dir = self.security.mingw_dir / "libexec" / "gcc" / "x86_64-w64-mingw32" / "9.2.0"
+
+        # 从配置中读取编译选项
         std = self.config['compilation']['cpp_standard']
         optimization = self.config['compilation']['optimization_level']
         extra_flags = self.config['compilation'].get('extra_flags', [])
 
         compile_cmd = [
-            compiler,
+            compiler_path,
+            "-B" + str(libexec_dir),
             str(cpp_file),
             '-std=' + std,
             optimization,
         ]
         compile_cmd.extend(extra_flags)
         compile_cmd.extend(['-o', str(exe_file)])
+
+        # 不再需要将 MinGW 添加到 PATH，使用 -B 选项已足够
 
         try:
             result = subprocess.run(
@@ -269,13 +276,23 @@ class CodeRunner:
 
             gdb_path = str(Path(mingw_dir) / "bin" / "gdb.exe")
             cmd = [gdb_path, '-x', str(gdb_script), executable, '--batch']
+
+            # 将 MinGW bin 目录添加到 PATH
+            mingw_bin = str(Path(mingw_dir) / "bin")
+            env = os.environ.copy()
+            if "PATH" in env:
+                env["PATH"] = mingw_bin + os.pathsep + env["PATH"]
+            else:
+                env["PATH"] = mingw_bin
+
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 check=False,
                 timeout=30,
-                cwd=self.security.temp_dir / "execute"
+                cwd=self.security.temp_dir / "execute",
+                env=env
             )
             return {
                 'success': result.returncode == 0,
