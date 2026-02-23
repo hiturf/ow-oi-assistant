@@ -17,6 +17,15 @@ except (ImportError, ModuleNotFoundError):
 
 from security import SecurityManager
 
+
+def _safe_unlink(path: Path) -> None:
+    """安全删除文件，忽略错误。"""
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 class CodeRunner:
     """处理C++代码的编译、运行、调试和输出比较。"""
 
@@ -96,6 +105,9 @@ class CodeRunner:
                 'error': f'编译异常: {str(exc)}',
                 'executable': None
             }
+        finally:
+            # 清理 cpp 源文件
+            _safe_unlink(cpp_file)
 
     def _get_memory_usage(self, pid: int) -> int:
         """获取进程内存使用量（KB）。"""
@@ -132,6 +144,7 @@ class CodeRunner:
         input_file = self.security.get_secure_temp_path("inputs").with_suffix('.in')
         input_file.write_text(input_data, encoding='utf-8')
         output_file = input_file.with_suffix('.out')
+        exe_path = Path(executable)
 
         # 资源限制函数（仅 Unix）
         def set_limits() -> None:
@@ -145,6 +158,12 @@ class CodeRunner:
                 except OSError:
                     # 任何设置限制失败都不要让运行崩溃
                     pass
+
+        def cleanup() -> None:
+            """清理临时文件。"""
+            _safe_unlink(input_file)
+            _safe_unlink(output_file)
+            _safe_unlink(exe_path)
 
         start_time = time.time()
         try:
@@ -172,6 +191,7 @@ class CodeRunner:
                 except subprocess.TimeoutExpired:
                     process.kill()
                     _, stderr = process.communicate()
+                    cleanup()
                     return {
                         'success': False,
                         'error': f'运行超时（{actual_time_limit}ms）',
@@ -192,6 +212,8 @@ class CodeRunner:
             if getattr(process, 'pid', None):
                 memory_used = self._get_memory_usage(process.pid)
 
+            # 清理临时文件后返回结果
+            cleanup()
             return {
                 'success': exit_code == 0,
                 'output': output_content,
@@ -201,6 +223,7 @@ class CodeRunner:
                 'exit_code': exit_code,
             }
         except (OSError, subprocess.SubprocessError) as exc:
+            cleanup()
             return {
                 'success': False,
                 'error': f'运行异常: {str(exc)}',
@@ -294,6 +317,8 @@ class CodeRunner:
                 cwd=self.security.temp_dir / "execute",
                 env=env
             )
+            # 清理 gdb 脚本
+            _safe_unlink(gdb_script)
             return {
                 'success': result.returncode == 0,
                 'output': result.stdout,
@@ -301,6 +326,8 @@ class CodeRunner:
                 'return_code': result.returncode
             }
         except subprocess.TimeoutExpired:
+            _safe_unlink(gdb_script)
             return {'success': False, 'error': 'GDB调试超时', 'output': None}
         except (OSError, subprocess.SubprocessError) as exc:
+            _safe_unlink(gdb_script)
             return {'success': False, 'error': f'GDB调试异常: {str(exc)}', 'output': None}

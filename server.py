@@ -220,7 +220,11 @@ async def compile_and_run(request: CompileAndRunRequest) -> CompileAndRunRespons
         return CompileAndRunResponse(
             success=False,
             result=f"## 编译失败\n```\n{error_msg}\n```",
-            compile_success=False
+            compile_success=False,
+            run_success=False,
+            output="",
+            time_used=0,
+            memory_used=0
         )
 
     # 运行
@@ -294,7 +298,8 @@ async def debug_with_gdb(request: DebugRequest) -> DebugResponse:
     if not compile_result["success"]:
         return DebugResponse(
             success=False,
-            result=f"## 编译失败\n```\n{compile_result.get('error')}\n```"
+            result=f"## 编译失败\n```\n{compile_result.get('error')}\n```",
+            gdb_output=None
         )
 
     gdb_result = runner.run_gdb(
@@ -414,11 +419,16 @@ async def read_test_case(request: TestCaseRequest) -> TestCaseResponse:
             return TestCaseResponse(
                 success=True,
                 result=f"## 测试用例文件: {request.test_case_id}\n```\n{content}\n```",
-                input_data=content
+                input_data=content,
+                expected_output=None,
+                description=None
             )
         return TestCaseResponse(
             success=False,
-            result=f"未找到测试用例: {request.test_case_id}"
+            result=f"未找到测试用例: {request.test_case_id}",
+            input_data=None,
+            expected_output=None,
+            description=None
         )
     except (IOError, OSError) as exc:
         raise HTTPException(
